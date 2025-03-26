@@ -1,28 +1,28 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>AR.js - RA com IQOS</title>
+    <title>MindAR - RA com IQOS</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.3/dist/mindar-image-aframe.prod.js"></script>
     <style>
       body {
         margin: 0;
         overflow: hidden;
       }
-      .arjs-loader {
-        height: 100%;
-        width: 100%;
-        position: absolute;
+      .loading {
+        position: fixed;
         top: 0;
         left: 0;
+        width: 100%;
+        height: 100%;
         background-color: rgba(0, 0, 0, 0.8);
         z-index: 9999;
         display: flex;
         justify-content: center;
         align-items: center;
       }
-      .arjs-loader div {
+      .loading div {
         text-align: center;
         font-size: 1.25em;
         color: white;
@@ -53,8 +53,8 @@
       }
     </style>
   </head>
-  <body style="margin: 0px; overflow: hidden;">
-    <div class="arjs-loader">
+  <body>
+    <div class="loading">
       <div>A carregar, por favor aguarde...</div>
     </div>
     <div id="debug">Estado: Inicializando...</div>
@@ -63,93 +63,44 @@
     </div>
 
     <a-scene
-      vr-mode-ui="enabled: false;"
-      renderer="logarithmicDepthBuffer: true;"
-      embedded
-      arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false; detectionMode: mono; maxDetectionRate: 60; canvasWidth: 480; canvasHeight: 360;">
+      mindar-image="imageTargetSrc: ./markers/targets.mind;"
+      color-space="sRGB"
+      renderer="colorManagement: true, physicallyCorrectLights"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false">
 
       <a-assets>
         <a-asset-item id="modelo" src="modelo3d/modelo.glb"></a-asset-item>
       </a-assets>
 
-      <a-marker type="pattern" url="markers/iluma-marker.patt">
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+      <a-entity mindar-image-target="targetIndex: 0">
         <a-entity
           id="modelo3d"
           gltf-model="#modelo"
           position="0 0 0"
           scale="10 10 10"
           class="clickable"
-          drag-rotate-component
           animation="property: rotation; to: 0 360 0; dur: 2000; loop: true; enabled: false">
         </a-entity>
-      </a-marker>
-
-      <a-entity camera="fov: 60; zoom: 1;"></a-entity>
+      </a-entity>
     </a-scene>
 
     <script>
-      AFRAME.registerComponent('drag-rotate-component', {
-        init: function () {
-          this.isVisible = false;
-          this.isDragging = false;
-          this.lastX = 0;
-          this.lastY = 0;
-          
-          // Atualiza visibilidade
-          this.el.sceneEl.addEventListener('markerFound', () => {
-            this.isVisible = true;
-          });
-          
-          this.el.sceneEl.addEventListener('markerLost', () => {
-            this.isVisible = false;
-          });
-          
-          // Touch events
-          this.el.sceneEl.canvas.addEventListener('touchstart', this.onTouchStart.bind(this));
-          this.el.sceneEl.canvas.addEventListener('touchmove', this.onTouchMove.bind(this));
-          this.el.sceneEl.canvas.addEventListener('touchend', this.onTouchEnd.bind(this));
-        },
-        
-        onTouchStart: function (event) {
-          if (!this.isVisible) return;
-          
-          this.isDragging = true;
-          this.lastX = event.touches[0].clientX;
-          this.lastY = event.touches[0].clientY;
-        },
-        
-        onTouchMove: function (event) {
-          if (!this.isVisible || !this.isDragging) return;
-          
-          const deltaX = event.touches[0].clientX - this.lastX;
-          const deltaY = event.touches[0].clientY - this.lastY;
-          
-          const position = this.el.object3D.position;
-          position.x += deltaX * 0.01; // Ajuste a sensibilidade aqui
-          position.y -= deltaY * 0.01; // Ajuste a sensibilidade aqui
-          
-          this.lastX = event.touches[0].clientX;
-          this.lastY = event.touches[0].clientY;
-        },
-        
-        onTouchEnd: function () {
-          this.isDragging = false;
-        }
-      });
-
       const debugDiv = document.getElementById('debug');
+      const loading = document.querySelector('.loading');
       const modelo = document.querySelector("#modelo3d");
-      const scene = document.querySelector('a-scene');
-      const loader = document.querySelector('.arjs-loader');
       
       // Eventos de carregamento
       window.addEventListener('load', function() {
         debugDiv.textContent = "Estado: Página carregada, aguardando câmara...";
       });
 
-      scene.addEventListener('loaded', function() {
+      const sceneEl = document.querySelector('a-scene');
+      sceneEl.addEventListener('renderstart', () => {
+        loading.style.display = 'none';
         debugDiv.textContent = "Estado: Cena iniciada, procurando marcador...";
-        loader.style.display = 'none';
       });
 
       // Eventos do modelo
@@ -169,16 +120,42 @@
       });
 
       // Eventos de detecção do marcador
-      const marker = document.querySelector('a-marker');
-      
-      marker.addEventListener("markerFound", () => {
+      const target = document.querySelector('a-entity[mindar-image-target]');
+      target.addEventListener("targetFound", event => {
         debugDiv.textContent = "Estado: Marcador encontrado!";
         modelo.setAttribute("visible", true);
       });
-      
-      marker.addEventListener("markerLost", () => {
+      target.addEventListener("targetLost", event => {
         debugDiv.textContent = "Estado: Marcador perdido, continue apontando...";
         modelo.setAttribute("visible", false);
+      });
+
+      // Touch events para rotação
+      let isDragging = false;
+      let lastX, lastY;
+
+      document.addEventListener('touchstart', function(event) {
+        isDragging = true;
+        lastX = event.touches[0].clientX;
+        lastY = event.touches[0].clientY;
+      });
+
+      document.addEventListener('touchmove', function(event) {
+        if (!isDragging) return;
+        
+        const deltaX = event.touches[0].clientX - lastX;
+        const deltaY = event.touches[0].clientY - lastY;
+        
+        const position = modelo.object3D.position;
+        position.x += deltaX * 0.01;
+        position.y -= deltaY * 0.01;
+        
+        lastX = event.touches[0].clientX;
+        lastY = event.touches[0].clientY;
+      });
+
+      document.addEventListener('touchend', function() {
+        isDragging = false;
       });
     </script>
   </body>
