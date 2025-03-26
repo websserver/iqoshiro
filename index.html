@@ -108,14 +108,28 @@
         debugDiv.textContent = "Estado: Modelo 3D carregado!";
       });
 
+      // Manipulador de clique no modelo
+      let isAnimating = false;
       modelo.addEventListener("click", function() {
+        // URL para onde queremos redirecionar
+        const url = "https://www.iqos.com";
+        
+        // Se já estiver animando, abre o link
+        if (isAnimating) {
+          window.open(url, '_blank');
+          return;
+        }
+        
+        // Se não estiver animando, inicia a animação
         const animationEl = this.getAttribute("animation");
         if (!animationEl.enabled) {
           this.setAttribute("animation", "enabled", true);
-          debugDiv.textContent = "Estado: Animação iniciada";
+          debugDiv.textContent = "Estado: Animação iniciada - Clique novamente para abrir o site";
+          isAnimating = true;
         } else {
           this.setAttribute("animation", "enabled", false);
           debugDiv.textContent = "Estado: Animação parada";
+          isAnimating = false;
         }
       });
 
