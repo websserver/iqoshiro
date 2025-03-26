@@ -66,14 +66,13 @@
       vr-mode-ui="enabled: false;"
       renderer="logarithmicDepthBuffer: true;"
       embedded
-      arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; maxDetectionRate: 60; canvasWidth: 480; canvasHeight: 360; displayWidth: 480; displayHeight: 360;">
+      arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false; detectionMode: mono; maxDetectionRate: 60; canvasWidth: 480; canvasHeight: 360;">
 
       <a-assets>
         <a-asset-item id="modelo" src="modelo3d/modelo.glb"></a-asset-item>
-        <img id="marker-image" src="markers/markerfinal.jpg">
       </a-assets>
 
-      <a-marker type="image" url="markers/markerfinal.jpg">
+      <a-marker type="pattern" url="markers/pattern-iluma.patt">
         <a-entity
           id="modelo3d"
           gltf-model="#modelo"
