@@ -168,15 +168,31 @@
         // Atualiza o contador
         slideCounter.textContent = `Modelo ${currentModelIndex + 1}/${modelos.length}`;
         
-        // Troca o modelo com uma transição suave
-        modelo.setAttribute('gltf-model', modelos[currentModelIndex]);
+        // Esconde o modelo atual
+        modelo.setAttribute("visible", false);
         
-        // Reseta a posição e escala
-        modelo.setAttribute('position', '0 0.1 0');
-        modelo.setAttribute('scale', '5 5 5');
-        
-        // Limpa o histórico de posições
-        positionHistory = [];
+        // Pequeno delay para garantir que o modelo anterior seja escondido
+        setTimeout(() => {
+          // Troca o modelo
+          modelo.setAttribute('gltf-model', modelos[currentModelIndex]);
+          
+          // Reseta a posição e escala
+          modelo.setAttribute('position', '0 0.1 0');
+          modelo.setAttribute('scale', '5 5 5');
+          
+          // Mostra o novo modelo
+          modelo.setAttribute("visible", true);
+          
+          // Limpa o histórico de posições
+          positionHistory = [];
+          
+          // Atualiza a posição estável
+          lastStablePosition = {
+            x: 0,
+            y: 0.1,
+            z: 0
+          };
+        }, 100);
       }
       
       // Eventos dos botões
