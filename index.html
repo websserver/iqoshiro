@@ -137,11 +137,30 @@
 
       <a-entity mindar-image-target="targetIndex: 0" smooth="true" smoothCount="30" smoothTolerance="0.002" smoothThreshold="0.5">
         <a-entity
-          id="modelo3d"
+          id="modelo3d-1"
           gltf-model="#modelo1"
           position="0 0.1 0"
           scale="5 5 5"
           class="clickable"
+          visible="true"
+          position-interpolation="type: linear; start: 0 0.1 0; end: 0 0.1 0; dur: 200">
+        </a-entity>
+        <a-entity
+          id="modelo3d-2"
+          gltf-model="#modelo2"
+          position="0 0.1 0"
+          scale="5 5 5"
+          class="clickable"
+          visible="false"
+          position-interpolation="type: linear; start: 0 0.1 0; end: 0 0.1 0; dur: 200">
+        </a-entity>
+        <a-entity
+          id="modelo3d-3"
+          gltf-model="#modelo3"
+          position="0 0.1 0"
+          scale="5 5 5"
+          class="clickable"
+          visible="false"
           position-interpolation="type: linear; start: 0 0.1 0; end: 0 0.1 0; dur: 200">
         </a-entity>
       </a-entity>
@@ -150,13 +169,15 @@
     <script>
       const debugDiv = document.getElementById('debug');
       const loading = document.querySelector('.loading');
-      const modelo = document.querySelector("#modelo3d");
+      const modelos = [
+        document.querySelector("#modelo3d-1"),
+        document.querySelector("#modelo3d-2"),
+        document.querySelector("#modelo3d-3")
+      ];
       const prevButton = document.getElementById('prev-model');
       const nextButton = document.getElementById('next-model');
       const slideCounter = document.getElementById('slide-counter');
       
-      // Configuração dos modelos
-      const modelos = ['#modelo1', '#modelo2', '#modelo3'];
       let currentModelIndex = 0;
       
       // Sistema de filtro de posição melhorado
@@ -170,6 +191,12 @@
       function trocarModelo(direcao) {
         debugDiv.textContent = "Estado: Iniciando troca de modelo...";
         
+        // Esconde o modelo atual
+        modelos[currentModelIndex].setAttribute("visible", false);
+        if(modelos[currentModelIndex].object3D) {
+          modelos[currentModelIndex].object3D.visible = false;
+        }
+        
         // Atualiza o índice do modelo
         if (direcao === 'next') {
           currentModelIndex = (currentModelIndex + 1) % modelos.length;
@@ -180,38 +207,29 @@
         // Atualiza o contador
         slideCounter.textContent = `Modelo ${currentModelIndex + 1}/${modelos.length}`;
         
-        debugDiv.textContent = `Estado: Preparando para carregar modelo ${currentModelIndex + 1}...`;
-
-        // Remove o modelo atual
-        modelo.removeAttribute('gltf-model');
+        debugDiv.textContent = `Estado: Trocando para modelo ${currentModelIndex + 1}...`;
         
-        // Pequeno delay para garantir que o modelo anterior foi removido
-        setTimeout(() => {
-          // Troca o modelo
-          modelo.setAttribute('gltf-model', modelos[currentModelIndex]);
-          
-          // Força a visibilidade
-          modelo.setAttribute("visible", true);
-          if(modelo.object3D) {
-            modelo.object3D.visible = true;
-          }
-          
-          // Reseta a posição e escala
-          modelo.setAttribute('position', '0 0.1 0');
-          modelo.setAttribute('scale', '5 5 5');
-          
-          // Limpa o histórico de posições
-          positionHistory = [];
-          
-          // Atualiza a posição estável
-          lastStablePosition = {
-            x: 0,
-            y: 0.1,
-            z: 0
-          };
-          
-          debugDiv.textContent = `Estado: Modelo ${currentModelIndex + 1} em carregamento...`;
-        }, 100);
+        // Mostra o novo modelo
+        modelos[currentModelIndex].setAttribute("visible", true);
+        if(modelos[currentModelIndex].object3D) {
+          modelos[currentModelIndex].object3D.visible = true;
+        }
+        
+        // Reseta a posição e escala do novo modelo
+        modelos[currentModelIndex].setAttribute('position', '0 0.1 0');
+        modelos[currentModelIndex].setAttribute('scale', '5 5 5');
+        
+        // Limpa o histórico de posições
+        positionHistory = [];
+        
+        // Atualiza a posição estável
+        lastStablePosition = {
+          x: 0,
+          y: 0.1,
+          z: 0
+        };
+        
+        debugDiv.textContent = `Estado: Modelo ${currentModelIndex + 1} ativado`;
       }
       
       // Eventos dos botões
@@ -237,57 +255,61 @@
       });
 
       // Eventos do modelo
-      modelo.addEventListener('model-loaded', function(ev) {
-        debugDiv.textContent = `Estado: Modelo ${currentModelIndex + 1} carregado com sucesso!`;
-        
-        // Força a visibilidade do modelo após o carregamento
-        modelo.setAttribute("visible", true);
-        if(modelo.object3D) {
-          modelo.object3D.visible = true;
-        }
+      modelos.forEach((modelo, index) => {
+        modelo.addEventListener('model-loaded', function(ev) {
+          debugDiv.textContent = `Estado: Modelo ${index + 1} carregado com sucesso!`;
+          
+          if(index === currentModelIndex) {
+            modelo.setAttribute("visible", true);
+            if(modelo.object3D) {
+              modelo.object3D.visible = true;
+            }
+          }
+        });
 
-        // Verifica se o modelo foi carregado corretamente
-        if(ev.detail && ev.detail.model) {
-          debugDiv.textContent = `Estado: Modelo ${currentModelIndex + 1} verificado e visível`;
-        } else {
-          debugDiv.textContent = `Estado: Erro ao carregar modelo ${currentModelIndex + 1}`;
-        }
-      });
+        modelo.addEventListener('model-error', function(ev) {
+          debugDiv.textContent = `Estado: Erro ao carregar modelo ${index + 1}`;
+          console.error('Erro no modelo:', ev);
+        });
 
-      // Adiciona listener para erros de modelo
-      modelo.addEventListener('model-error', function(ev) {
-        debugDiv.textContent = `Estado: Erro ao carregar modelo ${currentModelIndex + 1}`;
-        console.error('Erro no modelo:', ev);
-      });
-
-      // Manipulador de clique no modelo
-      modelo.addEventListener("click", function() {
-        const url = "https://www.iqos.com";
-        window.open(url, '_blank');
+        modelo.addEventListener("click", function() {
+          const url = "https://www.iqos.com";
+          window.open(url, '_blank');
+        });
       });
 
       // Eventos de detecção do marcador
       const target = document.querySelector('a-entity[mindar-image-target]');
       target.addEventListener("targetFound", event => {
         debugDiv.textContent = "Estado: Marcador encontrado!";
-        modelo.setAttribute("visible", true);
+        modelos[currentModelIndex].setAttribute("visible", true);
+        if(modelos[currentModelIndex].object3D) {
+          modelos[currentModelIndex].object3D.visible = true;
+        }
         lastStablePosition = {
-          x: modelo.object3D.position.x,
-          y: modelo.object3D.position.y,
-          z: modelo.object3D.position.z
+          x: modelos[currentModelIndex].object3D.position.x,
+          y: modelos[currentModelIndex].object3D.position.y,
+          z: modelos[currentModelIndex].object3D.position.z
         };
       });
+      
       target.addEventListener("targetLost", event => {
         debugDiv.textContent = "Estado: Marcador perdido, continue apontando...";
-        modelo.setAttribute("visible", false);
+        modelos.forEach(modelo => {
+          modelo.setAttribute("visible", false);
+          if(modelo.object3D) {
+            modelo.object3D.visible = false;
+          }
+        });
         positionHistory = [];
       });
 
       // Sistema de suavização de movimento melhorado
       sceneEl.addEventListener('render', () => {
-        if (!modelo.object3D.visible) return;
+        const currentModelo = modelos[currentModelIndex];
+        if (!currentModelo.object3D || !currentModelo.object3D.visible) return;
         
-        const currentPosition = modelo.object3D.position;
+        const currentPosition = currentModelo.object3D.position;
         
         positionHistory.push({
           x: currentPosition.x,
@@ -323,7 +345,7 @@
             lastStablePosition = avgPosition;
           }
           
-          modelo.object3D.position.set(
+          currentModelo.object3D.position.set(
             lastStablePosition.x,
             lastStablePosition.y,
             lastStablePosition.z
@@ -351,7 +373,8 @@
         const deltaX = event.touches[0].clientX - lastX;
         const deltaY = event.touches[0].clientY - lastY;
         
-        const position = modelo.object3D.position;
+        const currentModelo = modelos[currentModelIndex];
+        const position = currentModelo.object3D.position;
         position.x += deltaX * 0.01;
         position.y -= deltaY * 0.01;
         
