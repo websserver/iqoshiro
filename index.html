@@ -171,33 +171,29 @@
         // Atualiza o contador
         slideCounter.textContent = `Modelo ${currentModelIndex + 1}/${modelos.length}`;
         
-        // Esconde o modelo atual
-        modelo.setAttribute("visible", false);
+        debugDiv.textContent = `Estado: Preparando para carregar modelo ${currentModelIndex + 1}...`;
         
-        // Pequeno delay para garantir que o modelo anterior seja escondido
-        setTimeout(() => {
-          debugDiv.textContent = `Estado: Carregando modelo ${currentModelIndex + 1}...`;
-          
-          // Troca o modelo
-          modelo.setAttribute('gltf-model', modelos[currentModelIndex]);
-          
-          // Reseta a posição e escala
-          modelo.setAttribute('position', '0 0.1 0');
-          modelo.setAttribute('scale', '5 5 5');
-          
-          // Mostra o novo modelo
-          modelo.setAttribute("visible", true);
-          
-          // Limpa o histórico de posições
-          positionHistory = [];
-          
-          // Atualiza a posição estável
-          lastStablePosition = {
-            x: 0,
-            y: 0.1,
-            z: 0
-          };
-        }, 100);
+        // Força a visibilidade do modelo
+        modelo.setAttribute("visible", true);
+        
+        // Troca o modelo imediatamente
+        modelo.setAttribute('gltf-model', modelos[currentModelIndex]);
+        
+        // Reseta a posição e escala
+        modelo.setAttribute('position', '0 0.1 0');
+        modelo.setAttribute('scale', '5 5 5');
+        
+        // Limpa o histórico de posições
+        positionHistory = [];
+        
+        // Atualiza a posição estável
+        lastStablePosition = {
+          x: 0,
+          y: 0.1,
+          z: 0
+        };
+        
+        debugDiv.textContent = `Estado: Modelo ${currentModelIndex + 1} carregado!`;
       }
       
       // Eventos dos botões
@@ -224,9 +220,10 @@
 
       // Eventos do modelo
       modelo.addEventListener('model-loaded', function() {
-        debugDiv.textContent = "Estado: Modelo 3D carregado!";
-        // Garante que o modelo está visível quando carregado
+        debugDiv.textContent = `Estado: Modelo ${currentModelIndex + 1} carregado com sucesso!`;
+        // Força a visibilidade do modelo após o carregamento
         modelo.setAttribute("visible", true);
+        modelo.object3D.visible = true;
       });
 
       // Manipulador de clique no modelo
