@@ -30,13 +30,22 @@
       }
       #debug {
         position: fixed;
-        top: 10px;
-        left: 10px;
+        top: 50px;
+        left: 50%;
+        transform: translateX(-50%);
         background: rgba(0, 0, 0, 0.8);
         color: white;
-        padding: 10px;
-        font-family: monospace;
+        padding: 15px;
+        border-radius: 10px;
+        font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-size: 16px;
+        text-align: center;
         z-index: 1000;
+        max-width: 90%;
+        white-space: nowrap;
+        -webkit-backdrop-filter: blur(5px);
+        backdrop-filter: blur(5px);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
       }
       #controls {
         position: fixed;
@@ -51,6 +60,62 @@
         text-align: center;
         z-index: 1000;
       }
+      #slide-controls {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1000;
+        pointer-events: none;
+      }
+      .touch-area {
+        position: absolute;
+        top: 0;
+        width: 80px;
+        height: 100%;
+        pointer-events: auto;
+        z-index: 1001;
+      }
+      #prev-area {
+        left: 0;
+      }
+      #next-area {
+        right: 0;
+      }
+      .arrow-indicator {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(0, 0, 0, 0.6);
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        opacity: 0.6;
+      }
+      #prev-area .arrow-indicator {
+        left: 20px;
+      }
+      #next-area .arrow-indicator {
+        right: 20px;
+      }
+      #slide-counter {
+        position: fixed;
+        top: 50px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-family: Arial, sans-serif;
+        z-index: 1001;
+        -webkit-tap-highlight-color: transparent;
+      }
     </style>
   </head>
   <body>
@@ -59,11 +124,20 @@
     </div>
     <div id="debug">Estado: Inicializando...</div>
     <div id="controls">
-      👆 Arraste para mover o modelo
+      <H1>Descubre a tua I ILLUMA</H1>
     </div>
+    <div id="slide-controls">
+      <div class="touch-area" id="prev-area">
+        <div class="arrow-indicator">◀</div>
+      </div>
+      <div class="touch-area" id="next-area">
+        <div class="arrow-indicator">▶</div>
+      </div>
+    </div>
+    <div id="slide-counter">Modelo 1/3</div>
 
     <a-scene
-      mindar-image="imageTargetSrc: ./markers/targets.mind;"
+      mindar-image="imageTargetSrc: ./markers/targets.mind; smoothCount: 30; smoothTolerance: 0.002; smoothThreshold: 0.5;"
       color-space="sRGB"
       renderer="colorManagement: true, physicallyCorrectLights"
       vr-mode-ui="enabled: false"
@@ -77,14 +151,30 @@
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <a-entity mindar-image-target="targetIndex: 0">
+      <a-entity mindar-image-target="targetIndex: 0" smooth="true" smoothCount="30" smoothTolerance="0.002" smoothThreshold="0.5">
         <a-entity
-          id="modelo3d"
+          id="modelo3d-1"
           gltf-model="#modelo1"
-          position="0 0 0"
-          scale="10 10 10"
-          class="clickable"
-          animation="property: rotation; to: 0 360 0; dur: 2000; loop: true; enabled: false">
+          position="0 0.1 0"
+          scale="5 5 5"
+          visible="true"
+          position-interpolation="type: linear; start: 0 0.1 0; end: 0 0.1 0; dur: 200">
+        </a-entity>
+        <a-entity
+          id="modelo3d-2"
+          gltf-model="#modelo2"
+          position="0 0.1 0"
+          scale="5 5 5"
+          visible="false"
+          position-interpolation="type: linear; start: 0 0.1 0; end: 0 0.1 0; dur: 200">
+        </a-entity>
+        <a-entity
+          id="modelo3d-3"
+          gltf-model="#modelo3"
+          position="0 0.1 0"
+          scale="5 5 5"
+          visible="false"
+          position-interpolation="type: linear; start: 0 0.1 0; end: 0 0.1 0; dur: 200">
         </a-entity>
       </a-entity>
     </a-scene>
@@ -97,29 +187,95 @@
     <script>
       const debugDiv = document.getElementById('debug');
       const loading = document.querySelector('.loading');
-      const modelo = document.querySelector("#modelo3d");
-      const slideControls = document.getElementById('slide-controls');
-      const prevButton = document.getElementById('prev-model');
-      const nextButton = document.getElementById('next-model');
+      const modelos = [
+        document.querySelector("#modelo3d-1"),
+        document.querySelector("#modelo3d-2"),
+        document.querySelector("#modelo3d-3")
+      ];
+      const prevArea = document.getElementById('prev-area');
+      const nextArea = document.getElementById('next-area');
+      const slideCounter = document.getElementById('slide-counter');
       
-      let currentModelIndex = 1;
-      const models = ['#modelo1', '#modelo2', '#modelo3'];
+      let currentModelIndex = 0;
+      let lastTapTime = 0;
+      const TAP_DELAY = 500; // Previne trocas muito rápidas
       
-      // Função para trocar o modelo
-      function changeModel(direction) {
-        if (direction === 'next') {
-          currentModelIndex = (currentModelIndex % 3) + 1;
-        } else {
-          currentModelIndex = (currentModelIndex - 2 + 3) % 3 + 1;
+      function handleAreaTap(direction, e) {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
         }
         
-        modelo.setAttribute('gltf-model', models[currentModelIndex - 1]);
-        debugDiv.textContent = `Estado: Modelo ${currentModelIndex} carregado`;
+        const now = Date.now();
+        if (now - lastTapTime < TAP_DELAY) return;
+        lastTapTime = now;
+        
+        trocarModelo(direction);
+        return false;
       }
-
-      // Eventos dos botões
-      prevButton.addEventListener('click', () => changeModel('prev'));
-      nextButton.addEventListener('click', () => changeModel('next'));
+      
+      // Adiciona eventos de toque nas áreas
+      prevArea.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }, { passive: false });
+      
+      nextArea.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }, { passive: false });
+      
+      prevArea.addEventListener('touchend', (e) => handleAreaTap('prev', e), { passive: false });
+      nextArea.addEventListener('touchend', (e) => handleAreaTap('next', e), { passive: false });
+      
+      // Previne eventos de scroll nas áreas de toque
+      [prevArea, nextArea].forEach(area => {
+        area.addEventListener('touchmove', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }, { passive: false });
+      });
+      
+      // Desativa eventos de scroll na página quando tocar nas áreas
+      document.addEventListener('touchmove', (e) => {
+        if (e.target.closest('.touch-area')) {
+          e.preventDefault();
+          return false;
+        }
+      }, { passive: false });
+      
+      // Função para trocar o modelo
+      function trocarModelo(direcao) {
+        debugDiv.textContent = "Estado: Iniciando troca de modelo...";
+        
+        // Esconde o modelo atual
+        modelos[currentModelIndex].setAttribute("visible", false);
+        if(modelos[currentModelIndex].object3D) {
+          modelos[currentModelIndex].object3D.visible = false;
+        }
+        
+        // Atualiza o índice do modelo
+        if (direcao === 'next') {
+          currentModelIndex = (currentModelIndex + 1) % modelos.length;
+        } else {
+          currentModelIndex = (currentModelIndex - 1 + modelos.length) % modelos.length;
+        }
+        
+        // Atualiza o contador
+        slideCounter.textContent = `Modelo ${currentModelIndex + 1}/${modelos.length}`;
+        
+        debugDiv.textContent = `Estado: Trocando para modelo ${currentModelIndex + 1}...`;
+        
+        // Mostra o novo modelo
+        modelos[currentModelIndex].setAttribute("visible", true);
+        if(modelos[currentModelIndex].object3D) {
+          modelos[currentModelIndex].object3D.visible = true;
+        }
+        
+        // Reseta a posição e escala
+        modelos[currentModelIndex].setAttribute('position', '0 0.1 0');
+        modelos[currentModelIndex].setAttribute('scale', '5 5 5');
+      }
 
       // Eventos de carregamento
       window.addEventListener('load', function() {
@@ -132,75 +288,59 @@
         debugDiv.textContent = "Estado: Cena iniciada, procurando marcador...";
       });
 
-      // Eventos do modelo
-      modelo.addEventListener('model-loaded', function() {
-        debugDiv.textContent = "Estado: Modelo 3D carregado!";
+      // Eventos do modelo com sistema de clique melhorado
+      modelos.forEach((modelo, index) => {
+        modelo.addEventListener('model-loaded', function(ev) {
+          debugDiv.textContent = `Estado: Modelo ${index + 1} carregado com sucesso!`;
+          
+          if(index === currentModelIndex) {
+            modelo.setAttribute("visible", true);
+            if(modelo.object3D) {
+              modelo.object3D.visible = true;
+            }
+          }
+        });
+
+        modelo.addEventListener('model-error', function(ev) {
+          debugDiv.textContent = `Estado: Erro ao carregar modelo ${index + 1}`;
+          console.error('Erro no modelo:', ev);
+        });
       });
 
-      // Manipulador de clique no modelo
-      let isAnimating = false;
-      modelo.addEventListener("click", function() {
-        // URL para onde queremos redirecionar
-        const url = "https://www.iqos.com";
-        
-        // Se já estiver animando, abre o link
-        if (isAnimating) {
-          window.open(url, '_blank');
-          return;
-        }
-        
-        // Se não estiver animando, inicia a animação
-        const animationEl = this.getAttribute("animation");
-        if (!animationEl.enabled) {
-          this.setAttribute("animation", "enabled", true);
-          debugDiv.textContent = "Estado: Animação iniciada - Clique novamente para abrir o site";
-          isAnimating = true;
-        } else {
-          this.setAttribute("animation", "enabled", false);
-          debugDiv.textContent = "Estado: Animação parada";
-          isAnimating = false;
+      // Sistema de clique global para o modelo
+      sceneEl.addEventListener('click', function(event) {
+        if (modelos[currentModelIndex].object3D.visible) {
+          window.open("https://www.iqos.com", '_blank');
         }
       });
+
+      // Previne comportamentos padrão de toque na cena
+      sceneEl.addEventListener('touchstart', function(event) {
+        event.preventDefault();
+      }, { passive: false });
+
+      sceneEl.addEventListener('touchend', function(event) {
+        event.preventDefault();
+      }, { passive: false });
 
       // Eventos de detecção do marcador
       const target = document.querySelector('a-entity[mindar-image-target]');
       target.addEventListener("targetFound", event => {
         debugDiv.textContent = "Estado: Marcador encontrado!";
-        modelo.setAttribute("visible", true);
-        slideControls.style.display = 'block';
+        modelos[currentModelIndex].setAttribute("visible", true);
+        if(modelos[currentModelIndex].object3D) {
+          modelos[currentModelIndex].object3D.visible = true;
+        }
       });
+      
       target.addEventListener("targetLost", event => {
         debugDiv.textContent = "Estado: Marcador perdido, continue apontando...";
-        modelo.setAttribute("visible", false);
-        slideControls.style.display = 'none';
-      });
-
-      // Touch events para rotação
-      let isDragging = false;
-      let lastX, lastY;
-
-      document.addEventListener('touchstart', function(event) {
-        isDragging = true;
-        lastX = event.touches[0].clientX;
-        lastY = event.touches[0].clientY;
-      });
-
-      document.addEventListener('touchmove', function(event) {
-        if (!isDragging) return;
-        
-        const deltaX = event.touches[0].clientX - lastX;
-        const deltaY = event.touches[0].clientY - lastY;
-        
-        const position = modelo.object3D.position;
-        position.x += deltaX * 0.01;
-        position.y -= deltaY * 0.01;
-        
-        lastX = event.touches[0].clientX;
-        lastY = event.touches[0].clientY;
-      });
-
-      document.addEventListener('touchend', function() {
-        isDragging = false;
+        modelos.forEach(modelo => {
+          modelo.setAttribute("visible", false);
+          if(modelo.object3D) {
+            modelo.object3D.visible = false;
+          }
+        });
       });
     </script>
   </body>
