@@ -70,6 +70,7 @@
         justify-content: space-between;
         padding: 0 20px;
         z-index: 1000;
+        pointer-events: none;
       }
       .slide-button {
         background: rgba(0, 0, 0, 0.6);
@@ -81,7 +82,7 @@
         font-size: 24px;
         transition: background 0.3s;
         -webkit-tap-highlight-color: transparent;
-        touch-action: none;
+        touch-action: manipulation;
         width: 50px;
         height: 50px;
         display: flex;
@@ -91,6 +92,8 @@
         user-select: none;
         -webkit-user-select: none;
         -webkit-touch-callout: none;
+        pointer-events: auto;
+        position: relative;
       }
       .slide-button:hover {
         background: rgba(0, 0, 0, 0.8);
@@ -115,7 +118,7 @@
     </div>
     <div id="debug">Estado: Inicializando...</div>
     <div id="controls">
-      <img src="iqos_iluma.svg" alt="Kiwi standing on oval">
+      <H1>Descubre a tua I ILLUMA</H1>
     </div>
     <div id="slide-controls">
       <button class="slide-button" id="prev-model">◀</button>
@@ -235,44 +238,59 @@
         debugDiv.textContent = `Estado: Modelo ${currentModelIndex + 1} ativado`;
       }
       
-      // Eventos dos botões
-      prevButton.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        debugDiv.textContent = "Estado: Botão anterior clicado";
-        trocarModelo('prev');
+      // Função para trocar o modelo de forma segura
+      function trocarModeloSeguro(direcao) {
+        // Previne múltiplas chamadas rápidas
+        if (window.trocandoModelo) return;
+        window.trocandoModelo = true;
+        
+        trocarModelo(direcao);
+        
+        // Libera após um pequeno delay
+        setTimeout(() => {
+          window.trocandoModelo = false;
+        }, 500);
+      }
+      
+      // Eventos dos botões com tratamento especial para iOS
+      function handleButtonEvent(e, direcao) {
+        // Previne todos os comportamentos padrão
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        
+        trocarModeloSeguro(direcao);
+        return false;
+      }
+      
+      // Remove eventos antigos
+      prevButton.removeEventListener('click', null);
+      nextButton.removeEventListener('click', null);
+      
+      // Adiciona novos eventos
+      prevButton.onclick = (e) => handleButtonEvent(e, 'prev');
+      nextButton.onclick = (e) => handleButtonEvent(e, 'next');
+      
+      // Eventos de toque
+      prevButton.ontouchend = (e) => handleButtonEvent(e, 'prev');
+      nextButton.ontouchend = (e) => handleButtonEvent(e, 'next');
+      
+      // Previne eventos padrão de toque
+      [prevButton, nextButton].forEach(button => {
+        ['touchstart', 'touchmove', 'touchend', 'touchcancel'].forEach(eventName => {
+          button.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }, { passive: false });
+        });
       });
       
-      nextButton.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        debugDiv.textContent = "Estado: Botão próximo clicado";
-        trocarModelo('next');
-      });
-
-      // Prevenir comportamento padrão em eventos de toque nos botões
-      prevButton.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-      }, { passive: false });
-
-      nextButton.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-      }, { passive: false });
-
-      prevButton.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        debugDiv.textContent = "Estado: Botão anterior clicado";
-        trocarModelo('prev');
-      }, { passive: false });
-
-      nextButton.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        debugDiv.textContent = "Estado: Botão próximo clicado";
-        trocarModelo('next');
+      // Desativa eventos de scroll/zoom na área dos botões
+      document.body.addEventListener('touchmove', (e) => {
+        if (e.target.closest('.slide-button')) {
+          e.preventDefault();
+        }
       }, { passive: false });
       
       // Eventos de carregamento
