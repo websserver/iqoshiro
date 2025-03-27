@@ -63,7 +63,7 @@
     </div>
 
     <a-scene
-      mindar-image="imageTargetSrc: ./markers/targets.mind; smoothCount: 10; smoothTolerance: 0.01; smoothThreshold: 2;"
+      mindar-image="imageTargetSrc: ./markers/targets.mind; smoothCount: 20; smoothTolerance: 0.005; smoothThreshold: 1;"
       color-space="sRGB"
       renderer="colorManagement: true, physicallyCorrectLights"
       vr-mode-ui="enabled: false"
@@ -75,13 +75,14 @@
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <a-entity mindar-image-target="targetIndex: 0" smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="2">
+      <a-entity mindar-image-target="targetIndex: 0" smooth="true" smoothCount="20" smoothTolerance="0.005" smoothThreshold="1">
         <a-entity
           id="modelo3d"
           gltf-model="#modelo"
           position="0 0.1 0"
           scale="5 5 5"
-          class="clickable">
+          class="clickable"
+          position-interpolation="type: linear; start: 0 0.1 0; end: 0 0.1 0; dur: 100">
         </a-entity>
       </a-entity>
     </a-scene>
@@ -90,6 +91,11 @@
       const debugDiv = document.getElementById('debug');
       const loading = document.querySelector('.loading');
       const modelo = document.querySelector("#modelo3d");
+      
+      // Sistema de filtro de posição
+      let lastPosition = { x: 0, y: 0, z: 0 };
+      let positionHistory = [];
+      const maxHistoryLength = 5;
       
       // Eventos de carregamento
       window.addEventListener('load', function() {
@@ -109,7 +115,6 @@
 
       // Manipulador de clique no modelo
       modelo.addEventListener("click", function() {
-        // URL para onde queremos redirecionar
         const url = "https://www.iqos.com";
         window.open(url, '_blank');
       });
@@ -123,6 +128,43 @@
       target.addEventListener("targetLost", event => {
         debugDiv.textContent = "Estado: Marcador perdido, continue apontando...";
         modelo.setAttribute("visible", false);
+      });
+
+      // Sistema de suavização de movimento
+      sceneEl.addEventListener('render', () => {
+        if (!modelo.object3D.visible) return;
+        
+        const currentPosition = modelo.object3D.position;
+        
+        // Adiciona posição atual ao histórico
+        positionHistory.push({
+          x: currentPosition.x,
+          y: currentPosition.y,
+          z: currentPosition.z
+        });
+        
+        // Mantém apenas as últimas N posições
+        if (positionHistory.length > maxHistoryLength) {
+          positionHistory.shift();
+        }
+        
+        // Calcula a média das posições
+        const avgPosition = positionHistory.reduce((acc, pos) => ({
+          x: acc.x + pos.x,
+          y: acc.y + pos.y,
+          z: acc.z + pos.z
+        }), { x: 0, y: 0, z: 0 });
+        
+        avgPosition.x /= positionHistory.length;
+        avgPosition.y /= positionHistory.length;
+        avgPosition.z /= positionHistory.length;
+        
+        // Aplica a posição suavizada
+        modelo.object3D.position.set(
+          avgPosition.x,
+          avgPosition.y,
+          avgPosition.z
+        );
       });
 
       // Touch events para rotação
