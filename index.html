@@ -71,6 +71,14 @@
         cursor: pointer;
         font-size: 24px;
         transition: background 0.3s;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1001;
       }
       .slide-button:hover {
         background: rgba(0, 0, 0, 0.8);
@@ -84,7 +92,8 @@
         padding: 5px 10px;
         border-radius: 15px;
         font-family: Arial, sans-serif;
-        z-index: 1000;
+        z-index: 1001;
+        -webkit-tap-highlight-color: transparent;
       }
     </style>
   </head>
@@ -261,14 +270,18 @@
         }
       });
 
-      // Touch events para rotação
+      // Touch events para rotação e swipe
       let isDragging = false;
       let lastX, lastY;
+      let touchStartX = 0;
+      let touchEndX = 0;
+      const minSwipeDistance = 50;
 
       document.addEventListener('touchstart', function(event) {
         isDragging = true;
         lastX = event.touches[0].clientX;
         lastY = event.touches[0].clientY;
+        touchStartX = event.touches[0].clientX;
       });
 
       document.addEventListener('touchmove', function(event) {
@@ -285,9 +298,23 @@
         lastY = event.touches[0].clientY;
       });
 
-      document.addEventListener('touchend', function() {
+      document.addEventListener('touchend', function(event) {
         isDragging = false;
+        touchEndX = event.changedTouches[0].clientX;
+        handleSwipe();
       });
+
+      function handleSwipe() {
+        const swipeDistance = touchEndX - touchStartX;
+        
+        if (Math.abs(swipeDistance) > minSwipeDistance) {
+          if (swipeDistance > 0) {
+            trocarModelo('prev');
+          } else {
+            trocarModelo('next');
+          }
+        }
+      }
     </script>
   </body>
 </html> 
