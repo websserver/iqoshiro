@@ -81,13 +81,16 @@
         font-size: 24px;
         transition: background 0.3s;
         -webkit-tap-highlight-color: transparent;
-        touch-action: manipulation;
+        touch-action: none;
         width: 50px;
         height: 50px;
         display: flex;
         align-items: center;
         justify-content: center;
         z-index: 1001;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
       }
       .slide-button:hover {
         background: rgba(0, 0, 0, 0.8);
@@ -112,7 +115,7 @@
     </div>
     <div id="debug">Estado: Inicializando...</div>
     <div id="controls">
-      <H1>Descubre a tua I ILLUMA</H1>
+      <img src="iqos_iluma.svg" alt="Kiwi standing on oval">
     </div>
     <div id="slide-controls">
       <button class="slide-button" id="prev-model">◀</button>
@@ -233,15 +236,44 @@
       }
       
       // Eventos dos botões
-      prevButton.addEventListener('click', () => {
+      prevButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         debugDiv.textContent = "Estado: Botão anterior clicado";
         trocarModelo('prev');
       });
       
-      nextButton.addEventListener('click', () => {
+      nextButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         debugDiv.textContent = "Estado: Botão próximo clicado";
         trocarModelo('next');
       });
+
+      // Prevenir comportamento padrão em eventos de toque nos botões
+      prevButton.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }, { passive: false });
+
+      nextButton.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }, { passive: false });
+
+      prevButton.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        debugDiv.textContent = "Estado: Botão anterior clicado";
+        trocarModelo('prev');
+      }, { passive: false });
+
+      nextButton.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        debugDiv.textContent = "Estado: Botão próximo clicado";
+        trocarModelo('next');
+      }, { passive: false });
       
       // Eventos de carregamento
       window.addEventListener('load', function() {
