@@ -70,33 +70,21 @@
         justify-content: space-between;
         padding: 0 20px;
         z-index: 1000;
-        pointer-events: none;
       }
       .slide-button {
         background: rgba(0, 0, 0, 0.6);
         color: white;
-        border: none;
-        padding: 15px;
-        border-radius: 50%;
-        cursor: pointer;
-        font-size: 24px;
-        transition: background 0.3s;
-        -webkit-tap-highlight-color: transparent;
-        touch-action: manipulation;
         width: 50px;
         height: 50px;
+        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 1001;
+        font-size: 24px;
+        -webkit-tap-highlight-color: transparent;
         user-select: none;
         -webkit-user-select: none;
-        -webkit-touch-callout: none;
-        pointer-events: auto;
-        position: relative;
-      }
-      .slide-button:hover {
-        background: rgba(0, 0, 0, 0.8);
+        touch-action: none;
       }
       #slide-counter {
         position: fixed;
@@ -121,8 +109,8 @@
       <H1>Descubre a tua I ILLUMA</H1>
     </div>
     <div id="slide-controls">
-      <button class="slide-button" id="prev-model">◀</button>
-      <button class="slide-button" id="next-model">▶</button>
+      <div class="slide-button" id="prev-model">◀</div>
+      <div class="slide-button" id="next-model">▶</div>
     </div>
     <div id="slide-counter">Modelo 1/3</div>
 
@@ -252,32 +240,47 @@
         }, 500);
       }
       
-      // Eventos dos botões com tratamento especial para iOS
-      function handleButtonEvent(e, direcao) {
-        // Previne todos os comportamentos padrão
-        if (e) {
+      // Sistema de eventos de toque completamente novo
+      let touchStartTime = 0;
+      const MAX_TAP_DURATION = 300; // milissegundos
+
+      function handleTouchStart(e, direction) {
+        e.preventDefault();
+        touchStartTime = Date.now();
+      }
+
+      function handleTouchEnd(e, direction) {
+        e.preventDefault();
+        const touchDuration = Date.now() - touchStartTime;
+        
+        if (touchDuration < MAX_TAP_DURATION) {
+          trocarModeloSeguro(direction);
+        }
+      }
+
+      // Adiciona novos eventos de toque
+      prevButton.addEventListener('touchstart', (e) => handleTouchStart(e, 'prev'), { passive: false });
+      prevButton.addEventListener('touchend', (e) => handleTouchEnd(e, 'prev'), { passive: false });
+      
+      nextButton.addEventListener('touchstart', (e) => handleTouchStart(e, 'next'), { passive: false });
+      nextButton.addEventListener('touchend', (e) => handleTouchEnd(e, 'next'), { passive: false });
+
+      // Previne qualquer outro evento que possa causar refresh
+      document.addEventListener('touchmove', (e) => {
+        if (e.target.closest('.slide-button')) {
+          e.preventDefault();
+          return false;
+        }
+      }, { passive: false });
+
+      // Desativa comportamentos padrão nos botões
+      [prevButton, nextButton].forEach(button => {
+        button.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
-        }
+          return false;
+        }, { passive: false });
         
-        trocarModeloSeguro(direcao);
-        return false;
-      }
-      
-      // Remove eventos antigos
-      prevButton.removeEventListener('click', null);
-      nextButton.removeEventListener('click', null);
-      
-      // Adiciona novos eventos
-      prevButton.onclick = (e) => handleButtonEvent(e, 'prev');
-      nextButton.onclick = (e) => handleButtonEvent(e, 'next');
-      
-      // Eventos de toque
-      prevButton.ontouchend = (e) => handleButtonEvent(e, 'prev');
-      nextButton.ontouchend = (e) => handleButtonEvent(e, 'next');
-      
-      // Previne eventos padrão de toque
-      [prevButton, nextButton].forEach(button => {
         ['touchstart', 'touchmove', 'touchend', 'touchcancel'].forEach(eventName => {
           button.addEventListener(eventName, (e) => {
             e.preventDefault();
@@ -285,13 +288,6 @@
           }, { passive: false });
         });
       });
-      
-      // Desativa eventos de scroll/zoom na área dos botões
-      document.body.addEventListener('touchmove', (e) => {
-        if (e.target.closest('.slide-button')) {
-          e.preventDefault();
-        }
-      }, { passive: false });
       
       // Eventos de carregamento
       window.addEventListener('load', function() {
