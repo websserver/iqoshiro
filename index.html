@@ -149,24 +149,39 @@
         // Função para carregar modelo
         const loadModel = (url) => {
           return new Promise((resolve, reject) => {
+            debugDiv.textContent = `Estado: Carregando modelo ${url}...`;
+            console.log('Tentando carregar:', url);
+            
             const loader = new THREE.GLTFLoader();
             loader.load(url,
               (gltf) => {
+                console.log('Modelo carregado com sucesso:', url);
+                debugDiv.textContent = `Estado: Modelo ${url} carregado!`;
                 const model = gltf.scene;
                 model.scale.set(5, 5, 5);
                 model.position.set(0, 0.1, 0);
                 model.visible = false;
                 resolve(model);
               },
-              undefined,
-              reject
+              (progress) => {
+                const percent = (progress.loaded / progress.total * 100).toFixed(2);
+                debugDiv.textContent = `Estado: Carregando ${url} - ${percent}%`;
+                console.log(`Progresso ${url}:`, percent + '%');
+              },
+              (error) => {
+                console.error('Erro ao carregar modelo:', url, error);
+                debugDiv.textContent = `Estado: Erro ao carregar ${url}!`;
+                reject(error);
+              }
             );
           });
         };
 
         // Carrega todos os modelos
         try {
-          debugDiv.textContent = "Estado: Carregando modelos...";
+          debugDiv.textContent = "Estado: Iniciando carregamento dos modelos...";
+          console.log('Iniciando carregamento dos modelos');
+          
           const modelUrls = [
             "modelo3d/modelo.glb",
             "modelo3d/modelo2.glb",
@@ -174,19 +189,28 @@
           ];
 
           const anchor = mindarThree.addAnchor(0);
+          console.log('Anchor criado:', anchor);
           
           for (let i = 0; i < modelUrls.length; i++) {
+            debugDiv.textContent = `Estado: Carregando modelo ${i + 1} de ${modelUrls.length}...`;
             const model = await loadModel(modelUrls[i]);
             models.push(model);
             anchor.group.add(model);
+            console.log(`Modelo ${i + 1} adicionado ao anchor`);
           }
 
           // Mostra o primeiro modelo
-          models[0].visible = true;
-          debugDiv.textContent = "Estado: Modelos carregados!";
+          if (models.length > 0 && models[0]) {
+            models[0].visible = true;
+            console.log('Primeiro modelo definido como visível');
+            debugDiv.textContent = "Estado: Todos os modelos carregados!";
+          } else {
+            console.error('Nenhum modelo foi carregado corretamente');
+            debugDiv.textContent = "Estado: Erro - Nenhum modelo carregado!";
+          }
         } catch (error) {
           console.error("Erro ao carregar modelos:", error);
-          debugDiv.textContent = "Estado: Erro ao carregar modelos!";
+          debugDiv.textContent = `Estado: Erro ao carregar modelos: ${error.message}`;
         }
 
         // Função para trocar modelo
@@ -243,9 +267,16 @@
         });
 
         // Inicia o MindAR
-        await mindarThree.start();
-        loading.style.display = "none";
-        debugDiv.textContent = "Estado: Procurando marcador...";
+        try {
+          debugDiv.textContent = "Estado: Iniciando MindAR...";
+          await mindarThree.start();
+          loading.style.display = "none";
+          debugDiv.textContent = "Estado: Procurando marcador...";
+          console.log('MindAR iniciado com sucesso');
+        } catch (error) {
+          console.error('Erro ao iniciar MindAR:', error);
+          debugDiv.textContent = `Estado: Erro ao iniciar câmera: ${error.message}`;
+        }
 
         // Loop de renderização
         renderer.setAnimationLoop(() => {
