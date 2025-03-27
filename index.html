@@ -159,6 +159,9 @@
       
       // Função para trocar o modelo
       function trocarModelo(direcao) {
+        debugDiv.textContent = "Estado: Iniciando troca de modelo...";
+        
+        // Atualiza o índice do modelo
         if (direcao === 'next') {
           currentModelIndex = (currentModelIndex + 1) % modelos.length;
         } else {
@@ -173,6 +176,8 @@
         
         // Pequeno delay para garantir que o modelo anterior seja escondido
         setTimeout(() => {
+          debugDiv.textContent = `Estado: Carregando modelo ${currentModelIndex + 1}...`;
+          
           // Troca o modelo
           modelo.setAttribute('gltf-model', modelos[currentModelIndex]);
           
@@ -196,8 +201,15 @@
       }
       
       // Eventos dos botões
-      prevButton.addEventListener('click', () => trocarModelo('prev'));
-      nextButton.addEventListener('click', () => trocarModelo('next'));
+      prevButton.addEventListener('click', () => {
+        debugDiv.textContent = "Estado: Botão anterior clicado";
+        trocarModelo('prev');
+      });
+      
+      nextButton.addEventListener('click', () => {
+        debugDiv.textContent = "Estado: Botão próximo clicado";
+        trocarModelo('next');
+      });
       
       // Eventos de carregamento
       window.addEventListener('load', function() {
@@ -213,6 +225,8 @@
       // Eventos do modelo
       modelo.addEventListener('model-loaded', function() {
         debugDiv.textContent = "Estado: Modelo 3D carregado!";
+        // Garante que o modelo está visível quando carregado
+        modelo.setAttribute("visible", true);
       });
 
       // Manipulador de clique no modelo
