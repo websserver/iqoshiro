@@ -181,28 +181,37 @@
         slideCounter.textContent = `Modelo ${currentModelIndex + 1}/${modelos.length}`;
         
         debugDiv.textContent = `Estado: Preparando para carregar modelo ${currentModelIndex + 1}...`;
+
+        // Remove o modelo atual
+        modelo.removeAttribute('gltf-model');
         
-        // Força a visibilidade do modelo
-        modelo.setAttribute("visible", true);
-        
-        // Troca o modelo imediatamente
-        modelo.setAttribute('gltf-model', modelos[currentModelIndex]);
-        
-        // Reseta a posição e escala
-        modelo.setAttribute('position', '0 0.1 0');
-        modelo.setAttribute('scale', '5 5 5');
-        
-        // Limpa o histórico de posições
-        positionHistory = [];
-        
-        // Atualiza a posição estável
-        lastStablePosition = {
-          x: 0,
-          y: 0.1,
-          z: 0
-        };
-        
-        debugDiv.textContent = `Estado: Modelo ${currentModelIndex + 1} carregado!`;
+        // Pequeno delay para garantir que o modelo anterior foi removido
+        setTimeout(() => {
+          // Troca o modelo
+          modelo.setAttribute('gltf-model', modelos[currentModelIndex]);
+          
+          // Força a visibilidade
+          modelo.setAttribute("visible", true);
+          if(modelo.object3D) {
+            modelo.object3D.visible = true;
+          }
+          
+          // Reseta a posição e escala
+          modelo.setAttribute('position', '0 0.1 0');
+          modelo.setAttribute('scale', '5 5 5');
+          
+          // Limpa o histórico de posições
+          positionHistory = [];
+          
+          // Atualiza a posição estável
+          lastStablePosition = {
+            x: 0,
+            y: 0.1,
+            z: 0
+          };
+          
+          debugDiv.textContent = `Estado: Modelo ${currentModelIndex + 1} em carregamento...`;
+        }, 100);
       }
       
       // Eventos dos botões
@@ -228,11 +237,27 @@
       });
 
       // Eventos do modelo
-      modelo.addEventListener('model-loaded', function() {
+      modelo.addEventListener('model-loaded', function(ev) {
         debugDiv.textContent = `Estado: Modelo ${currentModelIndex + 1} carregado com sucesso!`;
+        
         // Força a visibilidade do modelo após o carregamento
         modelo.setAttribute("visible", true);
-        modelo.object3D.visible = true;
+        if(modelo.object3D) {
+          modelo.object3D.visible = true;
+        }
+
+        // Verifica se o modelo foi carregado corretamente
+        if(ev.detail && ev.detail.model) {
+          debugDiv.textContent = `Estado: Modelo ${currentModelIndex + 1} verificado e visível`;
+        } else {
+          debugDiv.textContent = `Estado: Erro ao carregar modelo ${currentModelIndex + 1}`;
+        }
+      });
+
+      // Adiciona listener para erros de modelo
+      modelo.addEventListener('model-error', function(ev) {
+        debugDiv.textContent = `Estado: Erro ao carregar modelo ${currentModelIndex + 1}`;
+        console.error('Erro no modelo:', ev);
       });
 
       // Manipulador de clique no modelo
