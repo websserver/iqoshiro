@@ -63,7 +63,7 @@
     </div>
 
     <a-scene
-      mindar-image="imageTargetSrc: ./markers/targets.mind; smoothCount: 20; smoothTolerance: 0.005; smoothThreshold: 1;"
+      mindar-image="imageTargetSrc: ./markers/targets.mind; smoothCount: 30; smoothTolerance: 0.002; smoothThreshold: 0.5;"
       color-space="sRGB"
       renderer="colorManagement: true, physicallyCorrectLights"
       vr-mode-ui="enabled: false"
@@ -75,14 +75,14 @@
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <a-entity mindar-image-target="targetIndex: 0" smooth="true" smoothCount="20" smoothTolerance="0.005" smoothThreshold="1">
+      <a-entity mindar-image-target="targetIndex: 0" smooth="true" smoothCount="30" smoothTolerance="0.002" smoothThreshold="0.5">
         <a-entity
           id="modelo3d"
           gltf-model="#modelo"
           position="0 0.1 0"
           scale="5 5 5"
           class="clickable"
-          position-interpolation="type: linear; start: 0 0.1 0; end: 0 0.1 0; dur: 100">
+          position-interpolation="type: linear; start: 0 0.1 0; end: 0 0.1 0; dur: 200">
         </a-entity>
       </a-entity>
     </a-scene>
@@ -92,10 +92,12 @@
       const loading = document.querySelector('.loading');
       const modelo = document.querySelector("#modelo3d");
       
-      // Sistema de filtro de posição
-      let lastPosition = { x: 0, y: 0, z: 0 };
+      // Sistema de filtro de posição melhorado
       let positionHistory = [];
-      const maxHistoryLength = 5;
+      const maxHistoryLength = 10; // Aumentado para 10 frames
+      const minHistoryLength = 3;  // Mínimo de frames para começar a suavizar
+      let lastStablePosition = { x: 0, y: 0, z: 0 };
+      const stabilityThreshold = 0.01; // Limiar para considerar uma posição estável
       
       // Eventos de carregamento
       window.addEventListener('load', function() {
@@ -124,13 +126,20 @@
       target.addEventListener("targetFound", event => {
         debugDiv.textContent = "Estado: Marcador encontrado!";
         modelo.setAttribute("visible", true);
+        // Inicializa a posição estável quando o marcador é encontrado
+        lastStablePosition = {
+          x: modelo.object3D.position.x,
+          y: modelo.object3D.position.y,
+          z: modelo.object3D.position.z
+        };
       });
       target.addEventListener("targetLost", event => {
         debugDiv.textContent = "Estado: Marcador perdido, continue apontando...";
         modelo.setAttribute("visible", false);
+        positionHistory = []; // Limpa o histórico quando perde o marcador
       });
 
-      // Sistema de suavização de movimento
+      // Sistema de suavização de movimento melhorado
       sceneEl.addEventListener('render', () => {
         if (!modelo.object3D.visible) return;
         
@@ -148,23 +157,40 @@
           positionHistory.shift();
         }
         
-        // Calcula a média das posições
-        const avgPosition = positionHistory.reduce((acc, pos) => ({
-          x: acc.x + pos.x,
-          y: acc.y + pos.y,
-          z: acc.z + pos.z
-        }), { x: 0, y: 0, z: 0 });
-        
-        avgPosition.x /= positionHistory.length;
-        avgPosition.y /= positionHistory.length;
-        avgPosition.z /= positionHistory.length;
-        
-        // Aplica a posição suavizada
-        modelo.object3D.position.set(
-          avgPosition.x,
-          avgPosition.y,
-          avgPosition.z
-        );
+        // Só aplica suavização se tiver histórico suficiente
+        if (positionHistory.length >= minHistoryLength) {
+          // Calcula a média ponderada das posições (mais recentes têm mais peso)
+          const weights = positionHistory.map((_, i) => (i + 1) / positionHistory.length);
+          const totalWeight = weights.reduce((a, b) => a + b, 0);
+          
+          const avgPosition = positionHistory.reduce((acc, pos, i) => ({
+            x: acc.x + pos.x * weights[i],
+            y: acc.y + pos.y * weights[i],
+            z: acc.z + pos.z * weights[i]
+          }), { x: 0, y: 0, z: 0 });
+          
+          avgPosition.x /= totalWeight;
+          avgPosition.y /= totalWeight;
+          avgPosition.z /= totalWeight;
+          
+          // Verifica se a nova posição é estável
+          const distance = Math.sqrt(
+            Math.pow(avgPosition.x - lastStablePosition.x, 2) +
+            Math.pow(avgPosition.y - lastStablePosition.y, 2) +
+            Math.pow(avgPosition.z - lastStablePosition.z, 2)
+          );
+          
+          if (distance < stabilityThreshold) {
+            lastStablePosition = avgPosition;
+          }
+          
+          // Aplica a posição suavizada
+          modelo.object3D.position.set(
+            lastStablePosition.x,
+            lastStablePosition.y,
+            lastStablePosition.z
+          );
+        }
       });
 
       // Touch events para rotação
