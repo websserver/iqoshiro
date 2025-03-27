@@ -1,32 +1,22 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt">
   <head>
-    <title>MindAR - RA com IQOS</title>
+    <meta charset="UTF-8" />
+    <title>IQOS AR Experience</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.3/dist/mindar-image-aframe.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.137.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.137.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.3/dist/mindar-image-three.prod.js"></script>
     <style>
       body {
         margin: 0;
         overflow: hidden;
       }
-      .loading {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.8);
-        z-index: 9999;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-      .loading div {
-        text-align: center;
-        font-size: 1.25em;
-        color: white;
-        font-family: Arial, sans-serif;
+      #container {
+        width: 100vw;
+        height: 100vh;
+        position: relative;
+        overflow: hidden;
       }
       #debug {
         position: fixed;
@@ -70,6 +60,7 @@
         justify-content: space-between;
         padding: 0 20px;
         z-index: 1000;
+        pointer-events: none;
       }
       .slide-button {
         background: rgba(0, 0, 0, 0.6);
@@ -79,326 +70,191 @@
         border-radius: 50%;
         cursor: pointer;
         font-size: 24px;
-        transition: background 0.3s;
-        -webkit-tap-highlight-color: transparent;
-        touch-action: manipulation;
         width: 50px;
         height: 50px;
         display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 1001;
-      }
-      .slide-button:hover {
-        background: rgba(0, 0, 0, 0.8);
+        pointer-events: auto;
+        -webkit-tap-highlight-color: transparent;
       }
       #slide-counter {
         position: fixed;
-        top: 50px;
-        right: 20px;
+        top: 120px;
+        left: 50%;
+        transform: translateX(-50%);
         background: rgba(0, 0, 0, 0.8);
         color: white;
         padding: 5px 10px;
         border-radius: 15px;
         font-family: Arial, sans-serif;
-        z-index: 1001;
-        -webkit-tap-highlight-color: transparent;
+        z-index: 1000;
+      }
+      .loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+      }
+      .loading div {
+        color: white;
+        font-family: Arial, sans-serif;
+        font-size: 1.25em;
       }
     </style>
   </head>
   <body>
-    <div class="loading">
-      <div>A carregar, por favor aguarde...</div>
-    </div>
+    <div id="container"></div>
     <div id="debug">Estado: Inicializando...</div>
-    <div id="controls">
-      👆 Arraste para mover o modelo
-    </div>
+    <div id="controls">👆 Arraste para mover o modelo</div>
     <div id="slide-controls">
       <button class="slide-button" id="prev-model">◀</button>
       <button class="slide-button" id="next-model">▶</button>
     </div>
     <div id="slide-counter">Modelo 1/3</div>
-
-    <a-scene
-      mindar-image="imageTargetSrc: ./markers/targets.mind; smoothCount: 30; smoothTolerance: 0.002; smoothThreshold: 0.5;"
-      color-space="sRGB"
-      renderer="colorManagement: true, physicallyCorrectLights"
-      vr-mode-ui="enabled: false"
-      device-orientation-permission-ui="enabled: false">
-
-      <a-assets>
-        <a-asset-item id="modelo1" src="modelo3d/modelo.glb"></a-asset-item>
-        <a-asset-item id="modelo2" src="modelo3d/modelo2.glb"></a-asset-item>
-        <a-asset-item id="modelo3" src="modelo3d/modelo3.glb"></a-asset-item>
-      </a-assets>
-
-      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
-      <a-entity mindar-image-target="targetIndex: 0" smooth="true" smoothCount="30" smoothTolerance="0.002" smoothThreshold="0.5">
-        <a-entity
-          id="modelo3d-1"
-          gltf-model="#modelo1"
-          position="0 0.1 0"
-          scale="5 5 5"
-          class="clickable"
-          visible="true"
-          position-interpolation="type: linear; start: 0 0.1 0; end: 0 0.1 0; dur: 200">
-        </a-entity>
-        <a-entity
-          id="modelo3d-2"
-          gltf-model="#modelo2"
-          position="0 0.1 0"
-          scale="5 5 5"
-          class="clickable"
-          visible="false"
-          position-interpolation="type: linear; start: 0 0.1 0; end: 0 0.1 0; dur: 200">
-        </a-entity>
-        <a-entity
-          id="modelo3d-3"
-          gltf-model="#modelo3"
-          position="0 0.1 0"
-          scale="5 5 5"
-          class="clickable"
-          visible="false"
-          position-interpolation="type: linear; start: 0 0.1 0; end: 0 0.1 0; dur: 200">
-        </a-entity>
-      </a-entity>
-    </a-scene>
+    <div class="loading"><div>A carregar, por favor aguarde...</div></div>
 
     <script>
-      const debugDiv = document.getElementById('debug');
-      const loading = document.querySelector('.loading');
-      const modelos = [
-        document.querySelector("#modelo3d-1"),
-        document.querySelector("#modelo3d-2"),
-        document.querySelector("#modelo3d-3")
-      ];
-      const prevButton = document.getElementById('prev-model');
-      const nextButton = document.getElementById('next-model');
-      const slideCounter = document.getElementById('slide-counter');
-      
-      let currentModelIndex = 0;
-      
-      // Sistema de filtro de posição melhorado
-      let positionHistory = [];
-      const maxHistoryLength = 10;
-      const minHistoryLength = 3;
-      let lastStablePosition = { x: 0, y: 0, z: 0 };
-      const stabilityThreshold = 0.01;
-      
-      // Função para trocar o modelo
-      function trocarModelo(direcao) {
-        debugDiv.textContent = "Estado: Iniciando troca de modelo...";
-        
-        // Esconde o modelo atual
-        modelos[currentModelIndex].setAttribute("visible", false);
-        if(modelos[currentModelIndex].object3D) {
-          modelos[currentModelIndex].object3D.visible = false;
-        }
-        
-        // Atualiza o índice do modelo
-        if (direcao === 'next') {
-          currentModelIndex = (currentModelIndex + 1) % modelos.length;
-        } else {
-          currentModelIndex = (currentModelIndex - 1 + modelos.length) % modelos.length;
-        }
-        
-        // Atualiza o contador
-        slideCounter.textContent = `Modelo ${currentModelIndex + 1}/${modelos.length}`;
-        
-        debugDiv.textContent = `Estado: Trocando para modelo ${currentModelIndex + 1}...`;
-        
-        // Mostra o novo modelo
-        modelos[currentModelIndex].setAttribute("visible", true);
-        if(modelos[currentModelIndex].object3D) {
-          modelos[currentModelIndex].object3D.visible = true;
-        }
-        
-        // Reseta a posição e escala do novo modelo
-        modelos[currentModelIndex].setAttribute('position', '0 0.1 0');
-        modelos[currentModelIndex].setAttribute('scale', '5 5 5');
-        
-        // Limpa o histórico de posições
-        positionHistory = [];
-        
-        // Atualiza a posição estável
-        lastStablePosition = {
-          x: 0,
-          y: 0.1,
-          z: 0
+      const start = async () => {
+        const debugDiv = document.getElementById('debug');
+        const loading = document.querySelector('.loading');
+        const slideCounter = document.getElementById('slide-counter');
+        const prevButton = document.getElementById('prev-model');
+        const nextButton = document.getElementById('next-model');
+
+        debugDiv.textContent = "Estado: Iniciando...";
+
+        // Configuração do MindAR
+        const mindarThree = new window.MINDAR.IMAGE.MindARThree({
+          container: document.querySelector("#container"),
+          imageTargetSrc: "./markers/targets.mind",
+          uiScanning: false,
+        });
+        const { renderer, scene, camera } = mindarThree;
+
+        // Configuração da iluminação
+        const light = new THREE.AmbientLight(0xffffff, 1.0);
+        scene.add(light);
+
+        // Array para armazenar os modelos
+        const models = [];
+        let currentModelIndex = 0;
+
+        // Função para carregar modelo
+        const loadModel = (url) => {
+          return new Promise((resolve, reject) => {
+            const loader = new THREE.GLTFLoader();
+            loader.load(url,
+              (gltf) => {
+                const model = gltf.scene;
+                model.scale.set(5, 5, 5);
+                model.position.set(0, 0.1, 0);
+                model.visible = false;
+                resolve(model);
+              },
+              undefined,
+              reject
+            );
+          });
         };
-        
-        debugDiv.textContent = `Estado: Modelo ${currentModelIndex + 1} ativado`;
-      }
-      
-      // Eventos dos botões
-      prevButton.addEventListener('click', () => {
-        debugDiv.textContent = "Estado: Botão anterior clicado";
-        trocarModelo('prev');
-      });
-      
-      nextButton.addEventListener('click', () => {
-        debugDiv.textContent = "Estado: Botão próximo clicado";
-        trocarModelo('next');
-      });
-      
-      // Eventos de carregamento
-      window.addEventListener('load', function() {
-        debugDiv.textContent = "Estado: Página carregada, aguardando câmara...";
-      });
 
-      const sceneEl = document.querySelector('a-scene');
-      sceneEl.addEventListener('renderstart', () => {
-        loading.style.display = 'none';
-        debugDiv.textContent = "Estado: Cena iniciada, procurando marcador...";
-      });
+        // Carrega todos os modelos
+        try {
+          debugDiv.textContent = "Estado: Carregando modelos...";
+          const modelUrls = [
+            "modelo3d/modelo.glb",
+            "modelo3d/modelo2.glb",
+            "modelo3d/modelo3.glb"
+          ];
 
-      // Eventos do modelo
-      modelos.forEach((modelo, index) => {
-        modelo.addEventListener('model-loaded', function(ev) {
-          debugDiv.textContent = `Estado: Modelo ${index + 1} carregado com sucesso!`;
+          const anchor = mindarThree.addAnchor(0);
           
-          if(index === currentModelIndex) {
-            modelo.setAttribute("visible", true);
-            if(modelo.object3D) {
-              modelo.object3D.visible = true;
-            }
+          for (let i = 0; i < modelUrls.length; i++) {
+            const model = await loadModel(modelUrls[i]);
+            models.push(model);
+            anchor.group.add(model);
           }
-        });
 
-        modelo.addEventListener('model-error', function(ev) {
-          debugDiv.textContent = `Estado: Erro ao carregar modelo ${index + 1}`;
-          console.error('Erro no modelo:', ev);
-        });
-
-        modelo.addEventListener("click", function() {
-          const url = "https://www.iqos.com";
-          window.open(url, '_blank');
-        });
-      });
-
-      // Eventos de detecção do marcador
-      const target = document.querySelector('a-entity[mindar-image-target]');
-      target.addEventListener("targetFound", event => {
-        debugDiv.textContent = "Estado: Marcador encontrado!";
-        modelos[currentModelIndex].setAttribute("visible", true);
-        if(modelos[currentModelIndex].object3D) {
-          modelos[currentModelIndex].object3D.visible = true;
+          // Mostra o primeiro modelo
+          models[0].visible = true;
+          debugDiv.textContent = "Estado: Modelos carregados!";
+        } catch (error) {
+          console.error("Erro ao carregar modelos:", error);
+          debugDiv.textContent = "Estado: Erro ao carregar modelos!";
         }
-        lastStablePosition = {
-          x: modelos[currentModelIndex].object3D.position.x,
-          y: modelos[currentModelIndex].object3D.position.y,
-          z: modelos[currentModelIndex].object3D.position.z
-        };
-      });
-      
-      target.addEventListener("targetLost", event => {
-        debugDiv.textContent = "Estado: Marcador perdido, continue apontando...";
-        modelos.forEach(modelo => {
-          modelo.setAttribute("visible", false);
-          if(modelo.object3D) {
-            modelo.object3D.visible = false;
-          }
-        });
-        positionHistory = [];
-      });
 
-      // Sistema de suavização de movimento melhorado
-      sceneEl.addEventListener('render', () => {
-        const currentModelo = modelos[currentModelIndex];
-        if (!currentModelo.object3D || !currentModelo.object3D.visible) return;
-        
-        const currentPosition = currentModelo.object3D.position;
-        
-        positionHistory.push({
-          x: currentPosition.x,
-          y: currentPosition.y,
-          z: currentPosition.z
-        });
-        
-        if (positionHistory.length > maxHistoryLength) {
-          positionHistory.shift();
-        }
-        
-        if (positionHistory.length >= minHistoryLength) {
-          const weights = positionHistory.map((_, i) => (i + 1) / positionHistory.length);
-          const totalWeight = weights.reduce((a, b) => a + b, 0);
-          
-          const avgPosition = positionHistory.reduce((acc, pos, i) => ({
-            x: acc.x + pos.x * weights[i],
-            y: acc.y + pos.y * weights[i],
-            z: acc.z + pos.z * weights[i]
-          }), { x: 0, y: 0, z: 0 });
-          
-          avgPosition.x /= totalWeight;
-          avgPosition.y /= totalWeight;
-          avgPosition.z /= totalWeight;
-          
-          const distance = Math.sqrt(
-            Math.pow(avgPosition.x - lastStablePosition.x, 2) +
-            Math.pow(avgPosition.y - lastStablePosition.y, 2) +
-            Math.pow(avgPosition.z - lastStablePosition.z, 2)
-          );
-          
-          if (distance < stabilityThreshold) {
-            lastStablePosition = avgPosition;
-          }
-          
-          currentModelo.object3D.position.set(
-            lastStablePosition.x,
-            lastStablePosition.y,
-            lastStablePosition.z
-          );
-        }
-      });
+        // Função para trocar modelo
+        const trocarModelo = (direcao) => {
+          // Esconde o modelo atual
+          models[currentModelIndex].visible = false;
 
-      // Touch events para rotação e swipe
-      let isDragging = false;
-      let lastX, lastY;
-      let touchStartX = 0;
-      let touchEndX = 0;
-      const minSwipeDistance = 50;
-
-      document.addEventListener('touchstart', function(event) {
-        isDragging = true;
-        lastX = event.touches[0].clientX;
-        lastY = event.touches[0].clientY;
-        touchStartX = event.touches[0].clientX;
-      });
-
-      document.addEventListener('touchmove', function(event) {
-        if (!isDragging) return;
-        
-        const deltaX = event.touches[0].clientX - lastX;
-        const deltaY = event.touches[0].clientY - lastY;
-        
-        const currentModelo = modelos[currentModelIndex];
-        const position = currentModelo.object3D.position;
-        position.x += deltaX * 0.01;
-        position.y -= deltaY * 0.01;
-        
-        lastX = event.touches[0].clientX;
-        lastY = event.touches[0].clientY;
-      });
-
-      document.addEventListener('touchend', function(event) {
-        isDragging = false;
-        touchEndX = event.changedTouches[0].clientX;
-        handleSwipe();
-      });
-
-      function handleSwipe() {
-        const swipeDistance = touchEndX - touchStartX;
-        
-        if (Math.abs(swipeDistance) > minSwipeDistance) {
-          if (swipeDistance > 0) {
-            trocarModelo('prev');
+          // Atualiza o índice
+          if (direcao === 'next') {
+            currentModelIndex = (currentModelIndex + 1) % models.length;
           } else {
-            trocarModelo('next');
+            currentModelIndex = (currentModelIndex - 1 + models.length) % models.length;
           }
-        }
-      }
+
+          // Mostra o novo modelo
+          models[currentModelIndex].visible = true;
+          
+          // Atualiza o contador
+          slideCounter.textContent = `Modelo ${currentModelIndex + 1}/${models.length}`;
+          debugDiv.textContent = `Estado: Modelo ${currentModelIndex + 1} ativo`;
+        };
+
+        // Eventos dos botões
+        prevButton.addEventListener('click', () => trocarModelo('prev'));
+        nextButton.addEventListener('click', () => trocarModelo('next'));
+
+        // Eventos de toque para arrastar
+        let isDragging = false;
+        let previousTouch;
+
+        document.addEventListener('touchstart', (e) => {
+          isDragging = true;
+          previousTouch = e.touches[0];
+        });
+
+        document.addEventListener('touchmove', (e) => {
+          if (!isDragging) return;
+
+          const touch = e.touches[0];
+          const deltaX = touch.clientX - previousTouch.clientX;
+          const deltaY = touch.clientY - previousTouch.clientY;
+
+          const currentModel = models[currentModelIndex];
+          if (currentModel && currentModel.visible) {
+            currentModel.position.x += deltaX * 0.01;
+            currentModel.position.y -= deltaY * 0.01;
+          }
+
+          previousTouch = touch;
+        });
+
+        document.addEventListener('touchend', () => {
+          isDragging = false;
+        });
+
+        // Inicia o MindAR
+        await mindarThree.start();
+        loading.style.display = "none";
+        debugDiv.textContent = "Estado: Procurando marcador...";
+
+        // Loop de renderização
+        renderer.setAnimationLoop(() => {
+          renderer.render(scene, camera);
+        });
+      };
+
+      // Inicia a aplicação quando o DOM estiver carregado
+      window.addEventListener('DOMContentLoaded', start);
     </script>
   </body>
 </html> 
