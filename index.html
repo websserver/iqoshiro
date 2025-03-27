@@ -157,7 +157,6 @@
           gltf-model="#modelo1"
           position="0 0.1 0"
           scale="5 5 5"
-          class="clickable"
           visible="true"
           position-interpolation="type: linear; start: 0 0.1 0; end: 0 0.1 0; dur: 200">
         </a-entity>
@@ -166,7 +165,6 @@
           gltf-model="#modelo2"
           position="0 0.1 0"
           scale="5 5 5"
-          class="clickable"
           visible="false"
           position-interpolation="type: linear; start: 0 0.1 0; end: 0 0.1 0; dur: 200">
         </a-entity>
@@ -175,7 +173,6 @@
           gltf-model="#modelo3"
           position="0 0.1 0"
           scale="5 5 5"
-          class="clickable"
           visible="false"
           position-interpolation="type: linear; start: 0 0.1 0; end: 0 0.1 0; dur: 200">
         </a-entity>
@@ -253,7 +250,7 @@
         debugDiv.textContent = "Estado: Cena iniciada, procurando marcador...";
       });
 
-      // Eventos do modelo
+      // Eventos do modelo com sistema de clique melhorado
       modelos.forEach((modelo, index) => {
         modelo.addEventListener('model-loaded', function(ev) {
           debugDiv.textContent = `Estado: Modelo ${index + 1} carregado com sucesso!`;
@@ -270,12 +267,23 @@
           debugDiv.textContent = `Estado: Erro ao carregar modelo ${index + 1}`;
           console.error('Erro no modelo:', ev);
         });
-
-        modelo.addEventListener("click", function() {
-          const url = "https://www.iqos.com";
-          window.open(url, '_blank');
-        });
       });
+
+      // Sistema de clique global para o modelo
+      sceneEl.addEventListener('click', function(event) {
+        if (modelos[currentModelIndex].object3D.visible) {
+          window.open("https://www.iqos.com", '_blank');
+        }
+      });
+
+      // Previne comportamentos padrão de toque na cena
+      sceneEl.addEventListener('touchstart', function(event) {
+        event.preventDefault();
+      }, { passive: false });
+
+      sceneEl.addEventListener('touchend', function(event) {
+        event.preventDefault();
+      }, { passive: false });
 
       // Eventos de detecção do marcador
       const target = document.querySelector('a-entity[mindar-image-target]');
